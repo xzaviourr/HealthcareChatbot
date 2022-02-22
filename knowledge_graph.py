@@ -52,23 +52,25 @@ class KnowledgeGraph:
         raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
 
         raw_objects = [json.loads(x) for x in raw_objects]
-        df = pd.DataFrame.from_dict(raw_objects)
+        df = pd.DataFrame.from_dict(raw_objects)[0:5]
         return df   
 
     def create_node(self, category, label, properties=None):
+        label = str(label)
+        label = label.lstrip().rstrip().lower()
         if category == "disease":
             node = Node(
                 category, 
                 name = label,
-                description = properties['desc'],
-                prevention = properties['prevent'],
-                causes = properties['cause'],
-                prone_to = properties['easy_get'],
-                propogation_way = properties['get_way'],
-                get_probability = properties['get_prob'],
-                cure_last_time = properties['cure_lasttime'],
-                cured_probabiltity = properties['cured_prob'],
-                cost_money = properties['cost_money']
+                description = str(properties['desc']).lower(),
+                prevention = str(properties['prevent']).lower(),
+                causes = str(properties['cause']).lower(),
+                prone_to = str(properties['easy_get']).lower(),
+                propogation_way = str(properties['get_way']).lower(),
+                get_probability = str(properties['get_prob']).lower(),
+                cure_last_time = str(properties['cure_lasttime']).lower(),
+                cured_probabiltity = str(properties['cured_prob']).lower(),
+                cost_money = str(properties['cost_money']).lower()
             )
         else:
             node = Node(
@@ -88,9 +90,7 @@ class KnowledgeGraph:
 
         return set(unique_list)
 
-    def controller(self):
-        self.dataset = self.dataset[0:5]
-
+    def create_all_nodes(self):
         # Create all disease nodes
         for index, row, in self.dataset.iterrows():
             self.create_node(category="disease", label=row['name'], properties=row)
@@ -126,7 +126,19 @@ class KnowledgeGraph:
         for ele in food:
             self.create_node(category="food", label=ele)
 
+    def create_relationships(self):
+        for index, row in self.dataset.iterrows():
+            disease = row['name'].lower().lstrip().rstrip()
+            for s in row['symptom']:
+                sym = s.lower().lstrip().rstrip()
+                query = f"""
+                MATCH (a:disease), (b:symptom)
+                WHERE a.name = '%s' AND b.name = '%s'
+                MERGE (a)-[:has_symptom]->(b) 
+                """%(disease, sym)
+                self.graph.run(query)
 
 obj = KnowledgeGraph()
 obj.delete_all_nodes()
-obj.controller()
+obj.create_all_nodes()
+obj.create_relationships()
