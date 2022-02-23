@@ -32,6 +32,20 @@ class KnowledgeGraph:
         self.dataset = self.load_dataset(self.configurations['DATASET_PATH'])
         self.graph = db_connect()
 
+        self.attribute_matching = {
+            "category": ["category", "belongs_to_category"], 
+            "symptom": ["symptom", "has_symptom"], 
+            "acompany": ["accompany_disease", "accompanies"], 
+            "cure_department": ["department", "cured_by_department"], 
+            "cure_way": ["cure_way", "cured_by"], 
+            "check": ["way_to_check", "required_check"], 
+            "recommand_drug": ["drug", "has_recommended_drug"], 
+            "common_drug": ["drug", "has_common_drug"], 
+            "do_eat": ["food", "do_eat"], 
+            "not_eat": ["food", "not_eat"], 
+            "recommand_eat": ["food", "recommended_eat"]
+            }
+
     def load_dataset(self, file_path):
         """
         Loads json file into pandas dataframe
@@ -126,19 +140,31 @@ class KnowledgeGraph:
         for ele in food:
             self.create_node(category="food", label=ele)
 
-    def create_relationships(self):
+    def create_relationship(self, start_node_type, end_node_type, start_node_name, end_node_name, relation_type):
+        start_node_name = str(start_node_name).lower().lstrip().rstrip()
+        end_node_name = str(end_node_name).lower().lstrip().rstrip()
+        query = f"""
+        MATCH (a:{start_node_type}), (b:{end_node_type})
+        WHERE a.name = '{start_node_name}' AND b.name = '{end_node_name}'
+        MERGE (a)-[:{relation_type}]->(b)
+        """
+        self.graph.run(query)
+        
+    def create_all_relationships(self):
         for index, row in self.dataset.iterrows():
-            disease = row['name'].lower().lstrip().rstrip()
-            for s in row['symptom']:
-                sym = s.lower().lstrip().rstrip()
-                query = f"""
-                MATCH (a:disease), (b:symptom)
-                WHERE a.name = '%s' AND b.name = '%s'
-                MERGE (a)-[:has_symptom]->(b) 
-                """%(disease, sym)
-                self.graph.run(query)
+            disease = row['name']
+            for att in self.attribute_matching.keys():
+                prop = row[att]
+                for node in prop:
+                    self.create_relationship(
+                        start_node_type="disease",
+                        end_node_type=self.attribute_matching[att][0],
+                        start_node_name=disease,
+                        end_node_name=node,
+                        relation_type=self.attribute_matching[att][1]
+                    )
 
 obj = KnowledgeGraph()
 obj.delete_all_nodes()
 obj.create_all_nodes()
-obj.create_relationships()
+obj.create_all_relationships()
