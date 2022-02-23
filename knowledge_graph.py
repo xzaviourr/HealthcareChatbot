@@ -2,6 +2,7 @@ from gettext import Catalog
 import json
 import pandas as pd
 import yaml
+import time
 
 from py2neo import Node
 
@@ -66,7 +67,7 @@ class KnowledgeGraph:
         raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
 
         raw_objects = [json.loads(x) for x in raw_objects]
-        df = pd.DataFrame.from_dict(raw_objects)[0:5]
+        df = pd.DataFrame.from_dict(raw_objects)[0:10]
         return df   
 
     def create_node(self, category, label, properties=None):
@@ -104,7 +105,7 @@ class KnowledgeGraph:
 
         return set(unique_list)
 
-    def create_all_nodes(self):
+    def create_all_graph_nodes(self):
         # Create all disease nodes
         for index, row, in self.dataset.iterrows():
             self.create_node(category="disease", label=row['name'], properties=row)
@@ -150,7 +151,7 @@ class KnowledgeGraph:
         """
         self.graph.run(query)
         
-    def create_all_relationships(self):
+    def create_all_graph_edges(self):
         for index, row in self.dataset.iterrows():
             disease = row['name']
             for att in self.attribute_matching.keys():
@@ -164,7 +165,27 @@ class KnowledgeGraph:
                         relation_type=self.attribute_matching[att][1]
                     )
 
+    def build_graph(self):
+        print("BUILDING KNOWLEDGE GRAPH STARTED")
+
+        print("PREVIOUS DATA DELETION STARTED")
+        start = time.time()
+        self.delete_all_nodes()
+        end = time.time()
+        print("PREVIOUS DATA DELETION FINISHED, TIME TAKEN ", end-start, " seconds")
+
+        print("GRAPH NODES CREATION STARTED")
+        start = time.time()
+        self.create_all_graph_nodes()
+        end = time.time()
+        print("GRAPH NODES CREATION FINISHED, TIME TAKEN ", end-start, " seconds")
+
+        print("GRAPH EDGE CREATION STARTED")
+        start = time.time()
+        self.create_all_graph_edges()
+        end = time.time()
+        print("GRAPH EDGE CREATION FINISHED, TIME TAKEN ", end-start, " seconds")
+        print("KNOWLEDGE GRAPH CREATED")
+
 obj = KnowledgeGraph()
-obj.delete_all_nodes()
-obj.create_all_nodes()
-obj.create_all_relationships()
+obj.build_graph()
