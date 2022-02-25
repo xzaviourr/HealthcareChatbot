@@ -28,6 +28,6 @@ https://www.kaggle.com/usamag123/disease-prediction-through-symptoms
 ## Medical terms dictionary
 https://www.medicinenet.com/script/main/alphaidx.asp?p=a_dict
 
-#Result
+# Result
 After running queries in graphQL on neo4j browser, the output shows all relationships and nodes as: 
 ![76ac812d-8775-4df0-b98b-a56205f41a38](https://user-images.githubusercontent.com/58950467/155718268-296b8378-0a67-4626-8ebd-df85c7a7e21d.jpeg)
