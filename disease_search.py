@@ -16,12 +16,3 @@ def disease_search(list_of_properties):
     full_query = f"MATCH {query} \nRETURN x"
     result = graph.run(full_query)
     return result
-
-l = [
-    ["symptom", "convulsions", "has_symptom"],
-    ["symptom", "low heat", "has_symptom"]
-]
-result = disease_search(l)
-for line in result:
-    print(line[0]['name'])
-
