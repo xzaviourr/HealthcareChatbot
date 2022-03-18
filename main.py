@@ -7,7 +7,9 @@ from disease_search import disease_search
 class HealthcareChatbot:
     def __init__(self):
         self.users = dict()
+        self.start_api()
 
+    def start_api(self):
         api = Flask(__name__)
 
         @api.route('/', methods = ['GET'])
@@ -45,7 +47,7 @@ class HealthcareChatbot:
             for ele in entities:
                 current_user.add_symptom(ele)
                 reply = "Symptom added"
-                
+
         elif intent == "ask_disease":
             result = disease_search(list_of_properties=current_user.get_knowledge_graph_query())
             possible_diseases = list()
@@ -60,13 +62,13 @@ class HealthcareChatbot:
         return user_id, reply
 
     def apply_nlu(self, text):
-        intent = ""
-        entities = list()
-        if "add_symptom" in text:
-            intent = "add_symptom"
-            entities = text.split(" ")[1:]
-        else:
-            intent = "ask_disease"
+        try:
+            intent, entity = text.split(":")
+            entities = entity.split(',')
+        except:
+            intent = text
+            entities = []
+        
         return intent, entities
 
 obj = HealthcareChatbot()

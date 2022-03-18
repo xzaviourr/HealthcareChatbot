@@ -67,7 +67,7 @@ class KnowledgeGraph:
         raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
 
         raw_objects = [json.loads(x) for x in raw_objects]
-        df = pd.DataFrame.from_dict(raw_objects)[0:10]
+        df = pd.DataFrame.from_dict(raw_objects)[0:100]
         return df   
 
     def create_node(self, category, label, properties=None):
