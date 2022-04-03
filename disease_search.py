@@ -16,3 +16,19 @@ def disease_search(list_of_properties):
     full_query = f"MATCH {query} \nRETURN x"
     result = graph.run(full_query)
     return result
+
+def suggest_question(list_of_diseases):
+    graph = db_connect()
+    for symptom in list_of_diseases:
+        query = f"""
+            MATCH (x:disease)-[:has_symptom]->(y:symptom)
+            WHERE x.name = "{symptom}"
+            RETURN y"""
+        result = graph.run(query)
+
+
+l = [['symptom', 'fatigue', 'has_symptom']]
+result = disease_search(l)
+
+for row in result:
+    print(row[0]['name'])

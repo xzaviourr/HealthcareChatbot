@@ -3,11 +3,16 @@ from turtle import pos
 from flask import Flask, jsonify, request
 from User import User
 from disease_search import disease_search
+from spello.model import SpellCorrectionModel
+
 
 class HealthcareChatbot:
     def __init__(self):
         self.users = dict()
         self.start_api()
+
+        self.spell_correcter = SpellCorrectionModel(language='en')
+        self.spell_correcter.load('Data/model.pkl/model.pkl')
 
     def start_api(self):
         api = Flask(__name__)
