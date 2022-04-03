@@ -1,3 +1,4 @@
+import re
 from Database.connection import db_connect
 
 def disease_search(list_of_properties):
@@ -19,16 +20,26 @@ def disease_search(list_of_properties):
 
 def suggest_question(list_of_diseases):
     graph = db_connect()
-    for symptom in list_of_diseases:
+    list_of_symptoms = dict()
+    for disease in list_of_diseases:
         query = f"""
             MATCH (x:disease)-[:has_symptom]->(y:symptom)
-            WHERE x.name = "{symptom}"
+            WHERE x.name = "{disease}"
             RETURN y"""
         result = graph.run(query)
+        symptoms = [symptom[0]['name'] for symptom in result]
+        list_of_symptoms[disease] = symptoms      
+
+    for k in list_of_symptoms.keys():
+        print(k, list_of_symptoms[k])
+        print("\n\n")
 
 
 l = [['symptom', 'fatigue', 'has_symptom']]
 result = disease_search(l)
 
+list_of_diseases = list()
 for row in result:
-    print(row[0]['name'])
+    list_of_diseases.append(row[0]['name'])   
+
+suggest_question(list_of_diseases)

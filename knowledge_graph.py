@@ -74,6 +74,8 @@ class KnowledgeGraph:
         label = str(label)
         label = label.lstrip().rstrip().lower()
         if category == "disease":
+            if str(self.graph.run(f"""MATCH (x:disease) WHERE x.name="{label}" RETURN x.name""")) != "(No data)":
+                return
             node = Node(
                 category, 
                 name = label,
@@ -103,9 +105,15 @@ class KnowledgeGraph:
             for ele in cell:
                 unique_list.append(ele)
 
-        return set(unique_list)
+        return unique_list
 
     def create_all_graph_nodes(self):
+        def preprocess_labels(list_of_attribute):
+            for i in range(len(list_of_attribute)):
+                list_of_attribute[i] = list_of_attribute[i].lstrip().rstrip().lower()
+            list_of_attribute = set(list_of_attribute)
+            return list_of_attribute
+
         # Create all disease nodes
         for index, row, in self.dataset.iterrows():
             self.create_node(category="disease", label=row['name'], properties=row)
@@ -118,10 +126,19 @@ class KnowledgeGraph:
         cure_ways = self.get_unique(self.dataset.cure_way)
         ways_to_check = self.get_unique(self.dataset.check)
         drugs = self.get_unique(self.dataset.recommand_drug)
-        drugs.update(self.get_unique(self.dataset.common_drug))
+        drugs += self.get_unique(self.dataset.common_drug)
         food = self.get_unique(self.dataset.do_eat)
-        food.update(self.get_unique(self.dataset.not_eat))
-        food.update(self.get_unique(self.dataset.recommand_eat))
+        food += self.get_unique(self.dataset.not_eat)
+        food += self.get_unique(self.dataset.recommand_eat)
+
+        symptoms = preprocess_labels(symptoms)
+        disease_categories = preprocess_labels(disease_categories)
+        accompany_diseases = preprocess_labels(accompany_diseases)
+        departments = preprocess_labels(departments)
+        cure_ways = preprocess_labels(cure_ways)
+        ways_to_check = preprocess_labels(ways_to_check)
+        drugs = preprocess_labels(drugs)
+        food = preprocess_labels(food)
 
         # Create Nodes for all unique properties
         for ele in disease_categories:
@@ -146,7 +163,7 @@ class KnowledgeGraph:
         end_node_name = str(end_node_name).lower().lstrip().rstrip()
         query = f"""
         MATCH (a:{start_node_type}), (b:{end_node_type})
-        WHERE a.name = '{start_node_name}' AND b.name = '{end_node_name}'
+        WHERE a.name = "{start_node_name}" AND b.name = "{end_node_name}"
         MERGE (a)-[:{relation_type}]->(b)
         """
         self.graph.run(query)
