@@ -2,3 +2,5 @@ venv
 temp.py
 **__pycache__**
 notes.md
+Config\database.yaml
+**__pycache__**
