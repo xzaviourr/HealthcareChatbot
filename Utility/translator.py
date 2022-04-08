@@ -4,7 +4,7 @@ import seaborn as sns
 import math
 import json
 
-disease_df = pd.read_json('Data/medical.json', lines=True, encoding='utf8')[553:1000]
+disease_df = pd.read_json('Data/medical.json', lines=True, encoding='utf8')[3893:]
 translated_df = pd.DataFrame(columns=disease_df.columns)
 translator_obj = Translator()
 
