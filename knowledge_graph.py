@@ -54,18 +54,19 @@ class KnowledgeGraph:
         :return: pandas dataframe for the loaded file
         """
         try:
-            df = pd.read_json(file_path)
+            file = open("Data\knowledge_graph_dataset_large.json")
+            raw_data= file.read()
         except FileNotFoundError as e:
             print("Dataset cannot be found. \n", e)
             exit(1)
 
-        # raw_objects = raw_data.split('}\n{')
-        # raw_objects = ['{' + x + '}' for x in raw_objects]
-        # raw_objects[0] = raw_objects[0][1:]
-        # raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
+        raw_objects = raw_data.split('}\n{')
+        raw_objects = ['{' + x + '}' for x in raw_objects]
+        raw_objects[0] = raw_objects[0][1:]
+        raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
 
-        # raw_objects = [json.loads(x) for x in raw_objects]
-        # df = pd.DataFrame.from_dict(raw_objects)[0:100]
+        raw_objects = [json.loads(x) for x in raw_objects]
+        df = pd.DataFrame.from_dict(raw_objects)[0:100]
         return df   
 
     def create_node(self, category, label, properties=None):
