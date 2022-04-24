@@ -1,5 +1,5 @@
 HOST: '127.0.0.1'
-PORT: 11003
+PORT: 7687
 USERNAME: 'neo4j'
 PASSWORD: 'Password'
 DATABASE_NAME: 'knowledgeGraphDb'
