@@ -8,7 +8,7 @@ from py2neo import Node
 
 from Database.connection import db_connect
 
-
+counter = 1
 class KnowledgeGraph:
     """
     Instance of knowledge graph, that is hosted on neo4j server. Contains functions for creation of the knowledge graph object
@@ -36,7 +36,9 @@ class KnowledgeGraph:
         self.attribute_matching = {
             "category": ["category", "belongs_to_category"], 
             "symptom": ["symptom", "has_symptom"], 
-            "acompany": ["accompany_disease", "accompanies"], 
+            "prevent": ["prevent", "has_prevention"],
+            "cause": ["cause", "has_cause"],
+            "acompany": ["disease", "accompanies"], 
             "cure_department": ["department", "cured_by_department"], 
             "cure_way": ["cure_way", "cured_by"], 
             "check": ["way_to_check", "required_check"], 
@@ -44,7 +46,8 @@ class KnowledgeGraph:
             "common_drug": ["drug", "has_common_drug"], 
             "do_eat": ["food", "do_eat"], 
             "not_eat": ["food", "not_eat"], 
-            "recommand_eat": ["food", "recommended_eat"]
+            "recommand_eat": ["food", "recommended_eat"],
+            "easy_get": ["prone_to", "prone_to"]
             }
 
     def load_dataset(self, file_path):
@@ -54,19 +57,10 @@ class KnowledgeGraph:
         :return: pandas dataframe for the loaded file
         """
         try:
-            file = open("Data\knowledge_graph_dataset_large.json")
-            raw_data= file.read()
+            df = pd.read_json(file_path)
         except FileNotFoundError as e:
             print("Dataset cannot be found. \n", e)
             exit(1)
-
-        raw_objects = raw_data.split('}\n{')
-        raw_objects = ['{' + x + '}' for x in raw_objects]
-        raw_objects[0] = raw_objects[0][1:]
-        raw_objects[-1] = raw_objects[-1][:len(raw_objects[-1]) -1]
-
-        raw_objects = [json.loads(x) for x in raw_objects]
-        df = pd.DataFrame.from_dict(raw_objects)[0:100]
         return df   
 
     def create_node(self, category, label, properties=None):
@@ -75,18 +69,23 @@ class KnowledgeGraph:
         if category == "disease":
             if str(self.graph.run(f"""MATCH (x:disease) WHERE x.name="{label}" RETURN x.name""")) != "(No data)":
                 return
+            
+            cost_money = "No Data"
+            if properties['cost_money'] != None and properties['cost_money'] != []: 
+                if properties['cost_money'] != [] and len(properties['cost_money']) == 2: 
+                    cost_money = str(properties['cost_money'][0]) + " - " + str(properties['cost_money'][1])
+                else:
+                    cost_money =  str(properties['cost_money'][0])
+            
             node = Node(
                 category, 
                 name = label,
                 description = str(properties['desc']).lower(),
-                prevention = str(properties['prevent']).lower(),
-                causes = str(properties['cause']).lower(),
-                prone_to = str(properties['easy_get']).lower(),
                 propogation_way = str(properties['get_way']).lower(),
                 get_probability = str(properties['get_prob']).lower(),
                 cure_last_time = str(properties['cure_lasttime']).lower(),
                 cured_probabiltity = str(properties['cured_prob']).lower(),
-                cost_money = str(properties['cost_money']).lower()
+                cost_money = cost_money 
             )
         else:
             node = Node(
@@ -120,7 +119,6 @@ class KnowledgeGraph:
         # Get all unique properties
         disease_categories = self.get_unique(self.dataset.category)
         symptoms = self.get_unique(self.dataset.symptom)
-        accompany_diseases = self.get_unique(self.dataset.acompany)
         departments = self.get_unique(self.dataset.cure_department)
         cure_ways = self.get_unique(self.dataset.cure_way)
         ways_to_check = self.get_unique(self.dataset.check)
@@ -129,23 +127,26 @@ class KnowledgeGraph:
         food = self.get_unique(self.dataset.do_eat)
         food += self.get_unique(self.dataset.not_eat)
         food += self.get_unique(self.dataset.recommand_eat)
+        prevent = self.get_unique(self.dataset.prevent)
+        cause = self.get_unique(self.dataset.cause)
+        easy_get = self.get_unique(self.dataset.easy_get)
 
         symptoms = preprocess_labels(symptoms)
         disease_categories = preprocess_labels(disease_categories)
-        accompany_diseases = preprocess_labels(accompany_diseases)
         departments = preprocess_labels(departments)
         cure_ways = preprocess_labels(cure_ways)
         ways_to_check = preprocess_labels(ways_to_check)
         drugs = preprocess_labels(drugs)
         food = preprocess_labels(food)
+        prevent = preprocess_labels(prevent)
+        cause = preprocess_labels(cause)
+        easy_get = preprocess_labels(easy_get)
 
         # Create Nodes for all unique properties
         for ele in disease_categories:
             self.create_node(category="disease category", label=ele)
         for ele in symptoms:
             self.create_node(category="symptom", label=ele)
-        for ele in accompany_diseases:
-            self.create_node(category="accompany_disease", label=ele)
         for ele in departments:
             self.create_node(category="department", label=ele)
         for ele in cure_ways:
@@ -156,16 +157,36 @@ class KnowledgeGraph:
             self.create_node(category="drug", label=ele)
         for ele in food:
             self.create_node(category="food", label=ele)
+        for ele in prevent:
+            self.create_node(category="prevention", label=ele)
+        for ele in cause:
+            self.create_node(category='cause', label=ele)
+        for ele in easy_get:
+            self.create_node(category="prone_to", label=ele)
 
     def create_relationship(self, start_node_type, end_node_type, start_node_name, end_node_name, relation_type):
+        global counter
+        print(counter)
+        counter += 1
         start_node_name = str(start_node_name).lower().lstrip().rstrip()
         end_node_name = str(end_node_name).lower().lstrip().rstrip()
-        query = f"""
-        MATCH (a:{start_node_type}), (b:{end_node_type})
-        WHERE a.name = "{start_node_name}" AND b.name = "{end_node_name}"
-        MERGE (a)-[:{relation_type}]->(b)
-        """
-        self.graph.run(query)
+        end_node_name =  end_node_name.replace("\"", "")
+        if relation_type == "acompanies":
+            if str(self.graph.run(f"""MATCH (x:disease) WHERE x.name="{end_node_name}" RETURN x.name""")) != "(No data)":
+                query = f"""
+                    MATCH (a:{start_node_type}), (b:{end_node_type})
+                    WHERE a.name = "{start_node_name}" AND b.name = "{end_node_name}"
+                    MERGE (a)-[:{relation_type}]->(b)
+                    """
+                self.graph.run(query) 
+        else:
+            query = f"""
+            MATCH (a:{start_node_type}), (b:{end_node_type})
+            WHERE a.name = "{start_node_name}" AND b.name = "{end_node_name}"
+            MERGE (a)-[:{relation_type}]->(b)
+            """
+            x = self.graph.run(query)
+            print(query)
         
     def create_all_graph_edges(self):
         for index, row in self.dataset.iterrows():
@@ -184,17 +205,17 @@ class KnowledgeGraph:
     def build_graph(self):
         print("BUILDING KNOWLEDGE GRAPH STARTED")
 
-        print("PREVIOUS DATA DELETION STARTED")
-        start = time.time()
-        self.delete_all_nodes()
-        end = time.time()
-        print("PREVIOUS DATA DELETION FINISHED, TIME TAKEN ", end-start, " seconds")
+        # print("PREVIOUS DATA DELETION STARTED")
+        # start = time.time()
+        # self.delete_all_nodes()
+        # end = time.time()
+        # print("PREVIOUS DATA DELETION FINISHED, TIME TAKEN ", end-start, " seconds")
 
         print("GRAPH NODES CREATION STARTED")
         start = time.time()
         self.create_all_graph_nodes()
         end = time.time()
-        print("GRAPH NODES CREATION FINISHED, TIME TAKEN ", end-start, " seconds")
+        print("GRAPH NODES CREATION FINISHED, TIME TAKEN ", end   -start, " seconds")
 
         print("GRAPH EDGE CREATION STARTED")
         start = time.time()
@@ -203,5 +224,5 @@ class KnowledgeGraph:
         print("GRAPH EDGE CREATION FINISHED, TIME TAKEN ", end-start, " seconds")
         print("KNOWLEDGE GRAPH CREATED")
 
-obj = KnowledgeGraph()
-obj.build_graph()
+# obj = KnowledgeGraph()
+# obj.build_graph()

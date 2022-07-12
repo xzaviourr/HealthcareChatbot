@@ -1,1 +1,1 @@
-DATASET_PATH: 'Data/knowledge_graph_dataset_small.json'
+DATASET_PATH: 'Data/preprocess_kg_database.json'
